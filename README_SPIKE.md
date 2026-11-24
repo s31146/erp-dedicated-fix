@@ -45,3 +45,11 @@ In Codespaces, inspect the Ports tab and open port 8000. Customer view is /; ope
 - Production backup requires encrypted off-site storage, retention policy, alerting, restore tests, and documented RPO/RTO. The dashboard only reports whether BACKUP_DIR is configured.
 - Monitoring shown here is process-local; export metrics to a central monitoring system before operating an SLA.
 - No load test has yet demonstrated 1,200 concurrent users, the ≤5% small-tenant degradation target, or 99.9% availability.
+
+## Load-test execution
+
+After both databases are seeded and the API is healthy, run the 1,200 virtual-small-user profile from the Codespace terminal:
+
+    python loadtest/loadtest.py --label ac2-ac3-1200-users --small-workers 1200 --whale-workers 40 --duration 60
+
+The report prints small-tenant p95 under enterprise load for AC2 and average-latency degradation between the baseline and enterprise-load phases for AC3. It also saves raw summaries under results/. This is a workload test, not proof of a production SLA; record the actual run output and environment before making acceptance claims.
