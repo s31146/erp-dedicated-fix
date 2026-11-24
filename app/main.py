@@ -1,5 +1,7 @@
 """Mini-ERP API with measurable dedicated-tenant spike capabilities."""
+import os
 import time
+import httpx
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -83,7 +85,24 @@ def monthly_report(tenant_id: int = Depends(guardrail.check), year: int = 2026):
                 (tenant_id, date(year, 1, 1), date(year + 1, 1, 1))).fetchall()
 
 @app.get("/admin/metrics")
-def metrics(): return {**guardrail.snapshot(), "pools": db.pool_stats(), "routing": db.routing_status()}
+def metrics():
+    snapshot = guardrail.snapshot()
+    pools = db.pool_stats()
+    dedicated_metrics_url = os.getenv("DEDICATED_METRICS_URL")
+    if dedicated_metrics_url:
+        try:
+            dedicated = httpx.get(dedicated_metrics_url, timeout=3.0)
+            dedicated.raise_for_status()
+            dedicated_data = dedicated.json()
+            snapshot["whale"] = dedicated_data["whale"]
+            pools.update(dedicated_data.get("pools", {}))
+            snapshot["whale_metrics_source"] = "api_whale"
+        except (httpx.HTTPError, KeyError, ValueError) as exc:
+            snapshot["whale_metrics_source"] = "unavailable"
+            snapshot["whale_metrics_error"] = str(exc)
+    else:
+        snapshot["whale_metrics_source"] = "local"
+    return {**snapshot, "pools": pools, "routing": db.routing_status()}
 
 @app.post("/admin/metrics/reset")
 def metrics_reset(): guardrail.reset(); return {"reset": True}
