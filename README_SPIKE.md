@@ -1,6 +1,6 @@
 # Enterprise Dedicated Environment — spike notes
 
-This spike routes enterprise tenant ID 1 to a dedicated PostgreSQL database and leaves the small tenants on the shared PostgreSQL service.
+This spike routes enterprise tenant ID 1 through a dedicated API service (`api_whale`) and dedicated PostgreSQL database (`db_whale`). Existing small tenants stay on the shared API service (`api`) and shared PostgreSQL database (`db`). Nginx routes `/t/1/...` to the enterprise API; all other requests go to the shared API.
 
 ## Implemented in this spike
 
@@ -18,6 +18,10 @@ The compose file now defines both db and db_whale, waits for both health checks,
 Rebuild and start the services:
 
     docker compose up -d --build
+
+Scale only the enterprise application service independently when needed:
+
+    docker compose up -d --scale api_whale=2
 
 Seed only the small tenants into the shared database:
 
@@ -53,3 +57,12 @@ After both databases are seeded and the API is healthy, run the 1,200 virtual-sm
     python loadtest/loadtest.py --label ac2-ac3-1200-users --small-workers 1200 --whale-workers 40 --duration 60
 
 The report prints small-tenant p95 under enterprise load for AC2 and average-latency degradation between the baseline and enterprise-load phases for AC3. It also saves raw summaries under results/. This is a workload test, not proof of a production SLA; record the actual run output and environment before making acceptance claims.
+
+
+## Isolation and security boundary
+
+The gateway provides network-level separation of tenant 1 application traffic and its database connection. SQL queries are tenant-scoped. However, this prototype still accepts the tenant ID from the URL and does not implement authenticated tenant identity or per-tenant credentials. Therefore AC1 is not production-verified: before launch, add authenticated identity-to-tenant binding, least-privilege database roles, and negative cross-tenant authorization tests. Do not expose this demo publicly with production data.
+
+## Backup and recovery
+
+No backup destination or restore process is provisioned by this spike. Before production, configure scheduled PostgreSQL backups for both database volumes, encryption, off-site retention, monitoring/alerting, and tested restore procedures with agreed RPO/RTO. AC4 requires external uptime monitoring and an SLA measurement window; local health checks are not proof of 99.9% availability.
