@@ -47,7 +47,7 @@ def add() -> None:
             SELECT o.tenant_id, o.id, 'SKU-' || (1 + (random() * 199)::int),
                    1 + (random() * 19)::int, round((5 + random() * 495)::numeric, 2)
             FROM orders o
-            CROSS JOIN LATERAL generate_series(1, 1 + (o.id %% 7))
+            CROSS JOIN LATERAL generate_series(1, 1 + (o.id % 7))
             WHERE o.tenant_id = %s
             """,
             (WHALE_ID,),
