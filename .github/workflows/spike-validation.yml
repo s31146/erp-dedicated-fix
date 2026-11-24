@@ -26,3 +26,12 @@ jobs:
         with:
           node-version: "20"
       - run: node --check app/static/ops.js
+
+  container-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Docker Compose configuration
+        run: docker compose config --quiet
+      - name: Build API image
+        run: docker build -t erp-dedicated-spike:ci .
