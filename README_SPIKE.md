@@ -5,7 +5,9 @@ This spike routes enterprise tenant ID 1 through a dedicated API service (`api_w
 ## Implemented in this spike
 
 - Tenant-to-DSN routing via TENANT_DSN_MAP, with a separate connection pool per unique DSN.
-- Dedicated db_whale PostgreSQL service in docker-compose.yml; tenant 1 is routed there by default.
+- Dedicated db_whale PostgreSQL service plus a separate api_whale application service with independent CPU/memory limits.
+- Nginx gateway routes `/t/1/...` requests to api_whale; all other requests go to the shared api service.
+- Enterprise application replicas can be scaled independently with `docker compose up -d --scale api_whale=2`.
 - A per-process concurrency guard for small-tenant monthly reports (maximum two simultaneous reports per tenant); excess requests receive HTTP 429.
 - Operations dashboard metrics for p50/p95/p99 latency, request errors, pool pressure, DB routing, simulation state and backup configuration.
 - A seed scope option to populate the shared database with small tenants and the dedicated database with tenant 1 only.
@@ -13,7 +15,7 @@ This spike routes enterprise tenant ID 1 through a dedicated API service (`api_w
 
 ## Start and seed the two databases
 
-The compose file now defines both db and db_whale, waits for both health checks, and configures tenant 1 routing.
+The compose file defines shared and dedicated databases, two separate API services, and an Nginx routing gateway. It waits for both database health checks.
 
 Rebuild and start the services:
 
@@ -33,7 +35,7 @@ Seed only the enterprise tenant into the dedicated database:
 
 Important: the seed command truncates the target database before populating it. Run the small and whale seed commands against their respective databases only. Do not run the default SEED_SCOPE=all against either database when testing split tenancy.
 
-In Codespaces, inspect the Ports tab and open port 8000. Customer view is /; operations dashboard is /ops.
+In Codespaces, inspect the Ports tab and open port 8000 (the Nginx gateway). Customer view is `/`; operations dashboard is `/ops`.
 
 ## Acceptance criteria verification plan
 
