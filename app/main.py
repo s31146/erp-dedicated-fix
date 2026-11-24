@@ -40,8 +40,16 @@ def page_ops(): return FileResponse(STATIC_DIR / "ops.html")
 
 @app.get("/api/tenants")
 def list_tenants():
+    # Small tenants live in the shared DB; enterprise tenant 1 lives in db_whale.
+    with db.tenant_conn(2) as conn:
+        small = conn.execute(
+            "SELECT id, name, plan FROM tenants WHERE id BETWEEN 2 AND 20 ORDER BY id"
+        ).fetchall()
     with db.tenant_conn(whale.WHALE_ID) as conn:
-        return conn.execute("SELECT id, name, plan FROM tenants WHERE id <= 20 ORDER BY id").fetchall()
+        enterprise = conn.execute(
+            "SELECT id, name, plan FROM tenants WHERE id = %s", (whale.WHALE_ID,)
+        ).fetchall()
+    return sorted([*enterprise, *small], key=lambda tenant: tenant["id"])
 
 @app.get("/health")
 def health(): return {"ok": True, "routing": db.routing_status()}
