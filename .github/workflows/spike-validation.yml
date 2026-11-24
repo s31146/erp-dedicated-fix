@@ -1,0 +1,40 @@
+name: spike-validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, "spike/**"]
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - run: python -m compileall -q app loadtest tests
+      - run: python -m unittest discover -s tests -v
+
+  javascript-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: node --check app/static/ops.js
+
+  container-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Docker Compose configuration
+        run: docker compose config --quiet
+      - name: Validate Nginx routing configuration
+        run: docker run --rm --add-host api:127.0.0.1 --add-host api_whale:127.0.0.1 -v "$PWD/infra/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:1.27-alpine nginx -t
+      - name: Build API image
+        run: docker build -t erp-dedicated-spike:ci .

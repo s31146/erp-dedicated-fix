@@ -61,7 +61,8 @@ async def whale_worker(client, stop_at, lat, errors):
 
 async def run_phase(args, whale_workers):
     small_lat, whale_lat, small_err, whale_err = [], [], [0], [0]
-    limits = httpx.Limits(max_connections=500)
+    connection_capacity = max(500, args.small_workers + whale_workers)
+    limits = httpx.Limits(max_connections=connection_capacity, max_keepalive_connections=connection_capacity)
     async with httpx.AsyncClient(base_url=args.base_url, timeout=30, limits=limits) as client:
         stop_at = time.perf_counter() + args.duration
         tasks = [small_worker(client, stop_at, small_lat, small_err, args.small_tenants)
@@ -70,6 +71,7 @@ async def run_phase(args, whale_workers):
         await asyncio.gather(*tasks)
     summary = lambda lat, err: {
         "requests": len(lat), "rps": round(len(lat) / args.duration, 1), "errors": err[0],
+        "avg_ms": round(sum(lat) / len(lat), 1) if lat else None,
         "p50_ms": pct(lat, 50), "p95_ms": pct(lat, 95), "p99_ms": pct(lat, 99),
     }
     return {"small": summary(small_lat, small_err), "whale": summary(whale_lat, whale_err)}
@@ -95,13 +97,16 @@ async def main():
     with open(f"results/{args.label}.json", "w") as f:
         json.dump(result, f, indent=2)
 
-    print(f"\n{'':<22}{'rps':>8}{'p50 ms':>10}{'p95 ms':>10}{'p99 ms':>10}{'errors':>8}")
+    print(f"\n{'':<22}{'rps':>8}{'avg ms':>10}{'p95 ms':>10}{'p99 ms':>10}{'errors':>8}")
     for name, r in (("small, no whale", base["small"]), ("small, with whale", with_whale["small"]),
                     ("whale reports", with_whale["whale"])):
-        print(f"{name:<22}{r['rps']:>8}{r['p50_ms']!s:>10}{r['p95_ms']!s:>10}{r['p99_ms']!s:>10}{r['errors']:>8}")
-    b, w = base["small"]["p95_ms"], with_whale["small"]["p95_ms"]
-    if b and w:
-        print(f"\nSmall-tenant p95 degradation caused by the whale: x{w / b:.1f}")
+        print(f"{name:<22}{r['rps']:>8}{r['avg_ms']!s:>10}{r['p95_ms']!s:>10}{r['p99_ms']!s:>10}{r['errors']:>8}")
+    b, w = base["small"]["avg_ms"], with_whale["small"]["avg_ms"]
+    if b is not None and w is not None and b > 0:
+        degradation = (w - b) / b * 100
+        print(f"\nAC3 average-latency degradation: {degradation:.1f}% (target <= 5%)")
+    p95 = with_whale["small"]["p95_ms"]
+    print(f"AC2 small-tenant p95 under enterprise load: {p95} ms (target <= 2000 ms)")
 
 
 if __name__ == "__main__":

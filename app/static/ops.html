@@ -1,41 +1,22 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mini-ERP - Operations</title>
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-<header><div class="inner">
-  <span class="brand">Mini-ERP</span>
-  <nav><a href="/">Customer</a><a href="/ops" class="active">Operations</a></nav>
-</div></header>
-<main>
-  <h1>Operations</h1>
-  <p class="sub">Panel for setting up the scenario: the big customer in the database and month-end.</p>
-
-  <div class="two">
-    <section class="card">
-      <b>Whale customer</b>
-      <div class="msg" id="whale-state">-</div>
-      <div class="row" style="margin-top:12px">
-        <button class="ghost" id="whale-remove">Remove whale</button>
-        <button id="whale-add">Add whale</button>
-      </div>
-      <p class="msg" id="whale-msg"></p>
-    </section>
-
-    <section class="card">
-      <b>Month-end</b>
-      <div class="msg" id="sim-state">-</div>
-      <div class="row" style="margin-top:12px">
-        <button id="sim-toggle">Simulate month-end</button>
-      </div>
-      <p class="msg">The whale's finance team runs monthly reports all at once.</p>
-    </section>
-  </div>
-</main>
-<script src="/static/ops.js"></script>
-</body>
-</html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Mini-ERP - Enterprise Operations</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><header><div class="inner"><span class="brand">Mini-ERP</span><nav><a href="/">Customer</a><a href="/ops" class="active">Operations</a></nav></div></header>
+<main><h1>Enterprise operations</h1><p class="sub">Dedicated environment spike for the 1,200-user distributor. Runtime metrics are demonstrative, not an SLA certification.</p>
+<div class="grid">
+<section class="card"><div class="label">Enterprise tenant</div><div class="big whale-c" id="tenant-state">Loading…</div><div class="msg" id="tenant-meta">Tenant 1 · Whale Distribution</div></section>
+<section class="card"><div class="label">Database routing</div><div class="big" id="routing-mode">Loading…</div><div class="msg" id="routing-detail">Checking tenant database map</div></section>
+<section class="card"><div class="label">Month-end simulation</div><div class="big" id="sim-state">Loading…</div><div class="msg">Concurrent enterprise report workers</div></section>
+</div>
+<div class="two">
+<section class="card"><b>Enterprise environment controls</b><p class="msg">Add/remove the demo enterprise tenant and run month-end load simulation.</p><div class="row" style="margin-top:12px"><button class="ghost" id="whale-remove">Remove tenant data</button><button id="whale-add">Provision demo tenant</button></div><div class="row"><button id="sim-toggle">Start month-end simulation</button><button class="ghost" id="refresh">Refresh metrics</button></div><p class="msg" id="action-msg"></p></section>
+<section class="card"><b>Acceptance criteria snapshot</b><div class="msg">AC1 · Tenant database routing shown below; access isolation must also be verified with negative tests.</div><div class="msg">AC2 · Target: 1,200 concurrent users, p95 standard request ≤ 2,000 ms.</div><div class="msg">AC3 · Target: small-tenant average latency degradation ≤ 5% versus baseline.</div><div class="msg">AC4 · Target availability ≥ 99.9%; not proven by this local spike.</div></section>
+</div>
+<h2 style="font-size:18px;margin-top:22px">Performance and resource monitoring</h2>
+<div class="grid">
+<section class="card"><div class="label">Enterprise p95</div><div class="big" id="whale-p95">—</div><div class="msg" id="whale-count">No samples yet</div></section>
+<section class="card"><div class="label">Small tenants p95</div><div class="big small-c" id="small-p95">—</div><div class="msg" id="small-count">No samples yet</div></section>
+<section class="card"><div class="label">Small tenant report slots</div><div class="big" id="report-slots">—</div><div class="msg">Concurrency cap per small tenant</div></section>
+</div>
+<section class="card"><b>Connection pools</b><div style="overflow-x:auto"><table><thead><tr><th>Database</th><th>Pool size</th><th>Available</th><th>Waiting</th><th>Errors</th></tr></thead><tbody id="pool-rows"></tbody></table></div><p class="msg" id="pool-msg"></p></section>
+<section class="card" style="margin-top:16px"><b>Backup & recovery configuration</b><div class="msg" id="backup-state">Checking configuration…</div><p class="msg">Production requirement: encrypted backups, off-site retention, restore drills, documented RPO/RTO and alerting.</p></section>
+</main><script src="/static/ops.js"></script></body></html>
