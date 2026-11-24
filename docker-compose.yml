@@ -39,6 +39,7 @@ services:
       DATABASE_URL: postgresql://erp:erp@db:5432/erp
       TENANT_DSN_MAP: '{"1": "postgresql://erp:erp@db_whale:5432/erp"}'
       POOL_MAX: "10"
+      SIM_API_URL: http://api_whale:8000
     expose: ["8000"]
     depends_on:
       db: { condition: service_healthy }
