@@ -1,7 +1,8 @@
-"""Month-end simulation: the whale's finance team runs reports all at once.
+"""Month-end simulation: the whale's finance team runs reports concurrently.
 
-Workers call the API over HTTP, like real users would, so everything between
-the browser and the database applies to them too.
+Workers call the API over HTTP, like real users would. Stop is cooperative:
+the status endpoint reports STOPPED as soon as the stop signal is set, even
+while an in-flight HTTP request is finishing.
 """
 import os
 import threading
@@ -13,10 +14,11 @@ WORKERS = int(os.getenv("SIM_WHALE_WORKERS", "40"))
 
 _stop = threading.Event()
 _threads: list[threading.Thread] = []
+_lock = threading.Lock()
 
 
 def _worker() -> None:
-    with httpx.Client(base_url=API_URL, timeout=60) as client:
+    with httpx.Client(base_url=API_URL, timeout=10) as client:
         while not _stop.is_set():
             try:
                 client.get("/t/1/reports/monthly", params={"year": 2026})
@@ -25,18 +27,21 @@ def _worker() -> None:
 
 
 def running() -> bool:
-    return any(t.is_alive() for t in _threads)
+    # Do not show RUNNING after Stop was requested just because an HTTP call
+    # is still unwinding in a worker thread.
+    return not _stop.is_set() and any(t.is_alive() for t in _threads)
 
 
 def start() -> None:
-    if running():
-        return
-    _stop.clear()
-    _threads.clear()
-    for _ in range(WORKERS):
-        t = threading.Thread(target=_worker, daemon=True)
-        t.start()
-        _threads.append(t)
+    with _lock:
+        if running():
+            return
+        _stop.clear()
+        _threads.clear()
+        for _ in range(WORKERS):
+            t = threading.Thread(target=_worker, daemon=True)
+            t.start()
+            _threads.append(t)
 
 
 def stop() -> None:
