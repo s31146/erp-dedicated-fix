@@ -61,7 +61,8 @@ async def whale_worker(client, stop_at, lat, errors):
 
 async def run_phase(args, whale_workers):
     small_lat, whale_lat, small_err, whale_err = [], [], [0], [0]
-    limits = httpx.Limits(max_connections=500)
+    connection_capacity = max(500, args.small_workers + whale_workers)
+    limits = httpx.Limits(max_connections=connection_capacity, max_keepalive_connections=connection_capacity)
     async with httpx.AsyncClient(base_url=args.base_url, timeout=30, limits=limits) as client:
         stop_at = time.perf_counter() + args.duration
         tasks = [small_worker(client, stop_at, small_lat, small_err, args.small_tenants)
